@@ -9,6 +9,9 @@ export const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..
 /** rules/ ディレクトリの絶対パス */
 export const RULES_DIR = join(PACKAGE_ROOT, "rules");
 
+/** AGENTS.md の共通部分の絶対パス */
+export const SHARED_AGENTS_MD_PATH = join(PACKAGE_ROOT, "agents-md", "shared.md");
+
 /** モジュールのカテゴリ */
 export const CATEGORIES = ["core", "lang", "stack"];
 

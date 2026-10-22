@@ -87,7 +87,10 @@ const printSyncResult = (result) => {
   console.log(labels.map(([key, label]) => `${label} ${result[key].length}`).join(" / "));
 };
 
-const reportBlockedSync = ({ edited, collisions }) => {
+const reportBlockedSync = ({ edited, collisions, problems }) => {
+  for (const problem of problems) {
+    console.error(problem);
+  }
   if (edited.length > 0) {
     console.error("同期済みのファイルがローカルで編集されています:");
     for (const relPath of edited) {
@@ -106,13 +109,23 @@ const reportBlockedSync = ({ edited, collisions }) => {
   }
 };
 
-const reflect = async ({ cwd, catalog, selectedIds, recordedFiles, force }) => {
-  const result = await reflectDotAgents({ cwd, catalog, selectedIds, recordedFiles, force });
+const reflect = async ({ cwd, catalog, selectedIds, recordedFiles, recordedBlocks, force }) => {
+  const result = await reflectDotAgents({
+    cwd,
+    catalog,
+    selectedIds,
+    recordedFiles,
+    recordedBlocks,
+    force,
+  });
   if (!result.ok) {
     reportBlockedSync(result);
     return 1;
   }
   printSyncResult(result);
+  for (const warning of result.warnings) {
+    console.error(warning);
+  }
   return 0;
 };
 
@@ -174,6 +187,7 @@ const runInit = async (args, { cwd }) => {
     catalog,
     selectedIds: [...new Set(selectedIds)].sort(),
     recordedFiles: {},
+    recordedBlocks: {},
     force: values.force,
   });
 };
@@ -204,6 +218,7 @@ const runSync = async (args, { cwd }) => {
     catalog,
     selectedIds: [...new Set(config.modules)].sort(),
     recordedFiles: config.files,
+    recordedBlocks: config.blocks,
     force: values.force,
   });
 };

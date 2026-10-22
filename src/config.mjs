@@ -22,6 +22,19 @@ export const normalizeNewlines = (text) => text.replaceAll("\r\n", "\n");
 export const hashContent = (text) =>
   `sha256:${createHash("sha256").update(normalizeNewlines(text)).digest("hex")}`;
 
+/**
+ * @function ファイルを LF 正規化して読み込む
+ *
+ * @param path ファイルの絶対パス
+ * @returns 中身。ファイルが存在しない場合は null
+ */
+export const readTextIfExists = async (path) => {
+  if (!existsSync(path)) {
+    return null;
+  }
+  return normalizeNewlines(await readFile(path, "utf8"));
+};
+
 const assertConfigShape = (config) => {
   const isObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
   if (!isObject(config)) {
@@ -32,6 +45,9 @@ const assertConfigShape = (config) => {
   }
   if (!isObject(config.files)) {
     throw new ConfigError(`${CONFIG_PATH} の files はオブジェクトにしてください`);
+  }
+  if (config.blocks !== undefined && !isObject(config.blocks)) {
+    throw new ConfigError(`${CONFIG_PATH} の blocks はオブジェクトにしてください`);
   }
 };
 
@@ -44,6 +60,8 @@ const assertConfigShape = (config) => {
  *   - modules: 選択した core 以外のモジュール ID の配列
  *   - files  : 反映したファイルのパスをキー、ハッシュを値とするオブジェクト
  *              パスは OS によらず同じ設定ファイルになるよう、ルートからの相対パスを / 区切りで書く
+ *   - blocks : 管理ブロックを持つファイルのパスをキー、ブロック部分のハッシュを値とするオブジェクト
+ *              キーの形式は files と同じ。書かれていない場合は {} として扱う
  * @throws {ConfigError} JSON として不正、または形式が不正な場合
  */
 export const readConfig = async (cwd) => {
@@ -62,7 +80,7 @@ export const readConfig = async (cwd) => {
     throw error;
   }
   assertConfigShape(config);
-  return config;
+  return { ...config, blocks: config.blocks ?? {} };
 };
 
 /**

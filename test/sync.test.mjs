@@ -114,7 +114,7 @@ test("sync は変更のないファイルを変更なしとして報告する", 
   const { code, stdout } = await runQuiet(t, ["sync"], cwd);
 
   assert.equal(code, 0);
-  assert.match(stdout, /追加 0 \/ 更新 0 \/ 削除 0 \/ 変更なし 6/);
+  assert.match(stdout, /追加 0 \/ 更新 0 \/ 削除 0 \/ 変更なし 7/);
 });
 
 test("sync はローカル編集があると 1 を返して何も変えず、--force で上書きする", async (t) => {
@@ -148,7 +148,7 @@ test("CRLF に変換された管理ファイルはローカル編集とみなさ
 
   const { code, stdout } = await runQuiet(t, ["sync"], cwd);
   assert.equal(code, 0);
-  assert.match(stdout, /変更なし 6/);
+  assert.match(stdout, /変更なし 7/);
 });
 
 test("管理外の同名ファイルは --force なしだと 1 を返し、何も書かない", async (t) => {
