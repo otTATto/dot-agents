@@ -9,6 +9,9 @@
     "url": "git+https://github.com/otTATto/dot-agents.git"
   },
   "type": "module",
+  "bin": {
+    "dot-agents": "bin/dot-agents.mjs"
+  },
   "engines": {
     "node": ">=22"
   },
