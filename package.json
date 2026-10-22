@@ -1,0 +1,24 @@
+{
+  "name": "dot-agents",
+  "version": "0.0.0",
+  "description": "Versioned AGENTS.md rules for coding agents, picked by language and stack and synced into each repo with npx.",
+  "license": "MIT",
+  "author": "otTATto",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/otTATto/dot-agents.git"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "agents-md",
+    "bin",
+    "rules",
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test"
+  }
+}
