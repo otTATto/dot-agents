@@ -12,6 +12,14 @@ export const RULES_DIR = join(PACKAGE_ROOT, "rules");
 /** モジュールのカテゴリ */
 export const CATEGORIES = ["core", "lang", "stack"];
 
+/**
+ * @function dot-agents 自身の package.json に書かれたバージョンを読む
+ */
+export const readPackageVersion = async () => {
+  const text = await readFile(join(PACKAGE_ROOT, "package.json"), "utf8");
+  return JSON.parse(text).version;
+};
+
 const HEADING_PATTERN = /^# (.+)$/m;
 
 const readTitle = async (path) => {
@@ -46,13 +54,30 @@ const loadCategory = async (category) => {
 };
 
 /**
+ * @function カテゴリをまたいで name が重複するモジュールがないことを検証する
+ *
+ * @param catalog loadCatalog() が返すカタログ
+ * @throws 重複する name がある場合（.agents/rules/ に平坦化すると衝突するため）
+ */
+export const assertUniqueNames = (catalog) => {
+  const seen = new Map();
+  for (const mod of Object.values(catalog).flat()) {
+    const other = seen.get(mod.name);
+    if (other) {
+      throw new Error(`モジュール名が重複しています: ${other.id} と ${mod.id}`);
+    }
+    seen.set(mod.name, mod);
+  }
+};
+
+/**
  * @function rules/ を走査してモジュールのカタログを作る
  *
  * @returns カテゴリ（core / lang / stack）をキー、name 昇順のモジュール配列を値とするオブジェクト
  *          各モジュールは { id, category, name, title, path }（path はソースの絶対パス）
  *
  * @throws rules/ またはカテゴリのディレクトリが存在しない場合、
- *         あるいは Markdown に level-1 見出しがない場合
+ *         Markdown に level-1 見出しがない場合、モジュール名がカテゴリをまたいで重複する場合
  */
 export const loadCatalog = async () => {
   if (!existsSync(RULES_DIR)) {
@@ -63,5 +88,6 @@ export const loadCatalog = async () => {
   for (const category of CATEGORIES) {
     catalog[category] = await loadCategory(category);
   }
+  assertUniqueNames(catalog);
   return catalog;
 };
