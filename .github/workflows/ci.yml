@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }}, Node.js ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # どの OS・Node.js で壊れたかを一度に見られるよう、1 つが失敗しても残りを最後まで走らせる
+      fail-fast: false
+      matrix:
+        # 改行コード（CRLF）とパス区切りの扱いを確かめるため、Windows でも動かす
+        os: [ubuntu-latest, windows-latest]
+        # サポートするすべての Node.js で確かめる
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  # rules/ や agents-md/ を変更したのに、dot-agents 自身への sync を忘れていないかを確かめる
+  self-sync:
+    name: Self Sync is Up to Date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: node bin/dot-agents.mjs sync
+      - name: Check That rules/ and agents-md/ are Reflected into dot-agents Itself
+        run: git diff --exit-code
