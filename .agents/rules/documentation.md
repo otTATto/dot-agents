@@ -1,4 +1,4 @@
-<!-- dot-agents v0.0.0 から同期したファイルです。
+<!-- dot-agents v0.1.0 から同期したファイルです。
      直接編集せず、https://github.com/otTATto/dot-agents を更新してください -->
 
 # ドキュメント作成に関するルール

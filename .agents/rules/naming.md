@@ -1,4 +1,4 @@
-<!-- dot-agents v0.0.0 から同期したファイルです。
+<!-- dot-agents v0.1.0 から同期したファイルです。
      直接編集せず、https://github.com/otTATto/dot-agents を更新してください -->
 
 # 変数名や関数名などの命名に関するルールや考え方

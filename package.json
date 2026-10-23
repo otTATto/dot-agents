@@ -1,6 +1,6 @@
 {
   "name": "dot-agents",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Versioned AGENTS.md rules for coding agents, picked by language and stack and synced into each repo with npx.",
   "license": "MIT",
   "author": "otTATto",
