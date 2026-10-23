@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -78,6 +78,24 @@ test("マーカーのない既存 AGENTS.md は --force でも変更せず、何
     assert.ok(!existsSync(join(cwd, ".agents")));
     assert.ok(!existsSync(claudePath(cwd)));
   }
+});
+
+test("マーカーの不備と同名ファイルの衝突は、まとめて報告する", async (t) => {
+  const cwd = await makeRepo(t);
+  await writeFile(agentsPath(cwd), "# 既存\n");
+  await mkdir(join(cwd, ".agents", "rules"), { recursive: true });
+  await writeFile(join(cwd, ".agents", "rules", "comment.md"), "# 手元のルール\n");
+
+  const { code, stderr } = await runQuiet(t, INIT, cwd);
+  assert.equal(code, 1);
+  assert.match(stderr, /マーカー/);
+  assert.ok(stderr.includes(".agents/rules/comment.md"));
+
+  const forced = await runQuiet(t, [...INIT, "--force"], cwd);
+  assert.equal(forced.code, 1);
+  assert.match(forced.stderr, /マーカー/);
+  assert.ok(!forced.stderr.includes(".agents/rules/comment.md"));
+  assert.equal(await readFile(join(cwd, ".agents", "rules", "comment.md"), "utf8"), "# 手元のルール\n");
 });
 
 test("マーカーが不正な AGENTS.md は 1 を返す", async (t) => {

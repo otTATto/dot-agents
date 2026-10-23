@@ -25,6 +25,7 @@ import { applySync, findSyncConflicts } from "./sync.mjs";
  * NOTE:
  *   - ルール・AGENTS.md・CLAUDE.md を反映し、AGENTS.md は管理ブロックのみを書き換える
  *   - problems: AGENTS.md のマーカーの不備。force でも反映しない
+ *   - 反映できない理由は、problems・edited・collisions をまとめて返す（force の場合は problems のみ）
  *   - edited には、AGENTS.md の管理ブロックがローカルで編集されている場合の AGENTS.md も含む
  *   - warnings: 反映は成功したが、ユーザーが対処すべき事項
  */
@@ -45,17 +46,18 @@ export const reflectDotAgents = async ({
     cwd,
     recordedBlockHash: recordedBlocks[AGENTS_MD_PATH],
   });
-  if (agentsMd.problem) {
-    return { ok: false, edited: [], collisions: [], problems: [agentsMd.problem] };
-  }
+  const problems = agentsMd.problem ? [agentsMd.problem] : [];
 
   const { edited, collisions } = await findSyncConflicts({ cwd, desiredFiles, recordedFiles });
   if (agentsMd.isBlockEdited) {
     edited.push(AGENTS_MD_PATH);
     edited.sort();
   }
-  if (!force && (edited.length > 0 || collisions.length > 0)) {
-    return { ok: false, edited, collisions, problems: [] };
+  const hasConflicts = !force && (edited.length > 0 || collisions.length > 0);
+  if (problems.length > 0 || hasConflicts) {
+    return force
+      ? { ok: false, edited: [], collisions: [], problems }
+      : { ok: false, edited, collisions, problems };
   }
 
   const result = await applySync({ cwd, desiredFiles, recordedFiles });
