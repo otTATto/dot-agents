@@ -5,7 +5,14 @@ import { hashContent, readTextIfExists } from "./config.mjs";
 
 const toAbsolute = (cwd, relPath) => join(cwd, ...relPath.split("/"));
 
-const findEditedFiles = async (cwd, recordedFiles) => {
+/**
+ * @function 記録済みのハッシュと現在の内容が異なる管理ファイルを調べる
+ *
+ * @param cwd 対象リポジトリのルート
+ * @param recordedFiles 設定ファイルに記録済みの files
+ * @returns ファイルパスの昇順の配列。ディスク上に無いファイルは含まない
+ */
+export const findEditedFiles = async (cwd, recordedFiles) => {
   const edited = [];
   for (const [relPath, recordedHash] of Object.entries(recordedFiles)) {
     const current = await readTextIfExists(toAbsolute(cwd, relPath));
@@ -15,6 +22,18 @@ const findEditedFiles = async (cwd, recordedFiles) => {
   }
   return edited.sort();
 };
+
+/**
+ * @function 記録済みなのにディスク上に無い管理ファイルを調べる
+ *
+ * @param cwd 対象リポジトリのルート
+ * @param recordedFiles 設定ファイルに記録済みの files
+ * @returns ファイルパスの昇順の配列
+ */
+export const findMissingFiles = (cwd, recordedFiles) =>
+  Object.keys(recordedFiles)
+    .filter((relPath) => !existsSync(toAbsolute(cwd, relPath)))
+    .sort();
 
 const findCollisions = (cwd, desiredFiles, recordedFiles) =>
   [...desiredFiles.keys()]

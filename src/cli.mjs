@@ -1,7 +1,10 @@
 import { parseArgs } from "node:util";
+import { findLocalProblems } from "./check.mjs";
 import { CONFIG_PATH, ConfigError, readConfig } from "./config.mjs";
-import { CATEGORIES, loadCatalog, readPackageVersion } from "./modules.mjs";
+import { CATEGORIES, loadCatalog } from "./modules.mjs";
+import { readPackageVersion } from "./package.mjs";
 import { reflectDotAgents } from "./reflect.mjs";
+import { compareVersions, findLatestVersion, listRemoteTags } from "./version.mjs";
 
 const USAGE = `dot-agents - LLM 向けルールをリポジトリに反映する CLI
 
@@ -13,6 +16,7 @@ const USAGE = `dot-agents - LLM 向けルールをリポジトリに反映する
   init [--lang <names>] [--stack <names>] [--core-only] [--force]
                   ルールモジュールを選んで初期化し、リポジトリに反映する
   sync [--force]  設定に従ってルールを再反映する
+  check           反映済みのファイルが手元で編集されていないか確かめる
 
 オプション:
   -h, --help      このヘルプを表示する
@@ -223,10 +227,72 @@ const runSync = async (args, { cwd }) => {
   });
 };
 
+const reportLocalProblems = ({ edited, missing, problems }) => {
+  for (const problem of problems) {
+    console.error(problem);
+  }
+  if (edited.length > 0) {
+    console.error("同期済みのファイルがローカルで編集されています:");
+    for (const relPath of edited) {
+      console.error(`  ${relPath}`);
+    }
+  }
+  if (missing.length > 0) {
+    console.error("同期済みのファイルが欠落しています:");
+    for (const relPath of missing) {
+      console.error(`  ${relPath}`);
+    }
+  }
+  console.error(
+    "同期したルールの変更は dot-agents 側で行い、sync で反映してください。ローカルの変更を破棄して戻す場合は sync --force を実行してください。",
+  );
+};
+
+const warnIfOutdated = async (currentVersion, fetchTags) => {
+  let tags;
+  try {
+    tags = await fetchTags();
+  } catch (error) {
+    const reason = String(error?.message ?? error).split("\n")[0];
+    console.error(`最新バージョンを確認できません（${reason}）`);
+    return;
+  }
+
+  const latestVersion = findLatestVersion(tags);
+  if (latestVersion === null || compareVersions(latestVersion, currentVersion) <= 0) {
+    return;
+  }
+  console.error(`新しいバージョン v${latestVersion} があります`);
+  console.error(`  現在 v${currentVersion}`);
+  console.error(`  npx github:otTATto/dot-agents#v${latestVersion} sync`);
+};
+
+const runCheck = async (args, { cwd, listRemoteTags: fetchTags }) => {
+  parseArgs({ args, options: {}, allowPositionals: false });
+  const config = await readConfig(cwd);
+  if (config === null) {
+    console.error(`${CONFIG_PATH} が見つかりません。先に init を実行してください。`);
+    return 1;
+  }
+
+  const local = await findLocalProblems({ cwd, config });
+  const hasProblems = local.edited.length + local.missing.length + local.problems.length > 0;
+  if (hasProblems) {
+    reportLocalProblems(local);
+  }
+  await warnIfOutdated(config.version, fetchTags);
+  if (hasProblems) {
+    return 1;
+  }
+  console.log(`問題ありません（dot-agents v${config.version}）`);
+  return 0;
+};
+
 const COMMANDS = {
   list: runList,
   init: runInit,
   sync: runSync,
+  check: runCheck,
 };
 
 /**
@@ -234,13 +300,18 @@ const COMMANDS = {
  *
  * @param argv サブコマンド以降の引数配列（process.argv.slice(2) 相当）
  * @param options.cwd 対象リポジトリのルート（既定は process.cwd()）
- * @returns プロセスの終了コード（正常時 0、未知のコマンド・不正なオプション・不正な設定・反映の衝突時 1）
+ * @param options.listRemoteTags check が最新バージョンの確認に使うタグ名の取得関数（既定は version.mjs の listRemoteTags）
+ * @returns プロセスの終了コード（正常時 0、未知のコマンド・不正なオプション・不正な設定・反映の衝突時、check で問題が見つかった時 1）
  *
  * NOTE:
  *   - 出力は標準出力、エラーと未知コマンド時の usage は標準エラーに書く
  *   - コマンド内で発生した予期しない例外は呼び出し元に伝播する
+ *   - check は最新バージョンを確認できなくても失敗にせず、警告を標準エラーに書く
  */
-export const run = async (argv, { cwd = process.cwd() } = {}) => {
+export const run = async (
+  argv,
+  { cwd = process.cwd(), listRemoteTags: fetchTags = listRemoteTags } = {},
+) => {
   const [command, ...rest] = argv;
 
   if (command === undefined || command === "help" || command === "--help" || command === "-h") {
@@ -261,7 +332,7 @@ export const run = async (argv, { cwd = process.cwd() } = {}) => {
   }
 
   try {
-    return await handler(rest, { cwd });
+    return await handler(rest, { cwd, listRemoteTags: fetchTags });
   } catch (error) {
     if (error instanceof ConfigError || error?.code?.startsWith("ERR_PARSE_ARGS_")) {
       console.error(error.message);

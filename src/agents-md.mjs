@@ -1,7 +1,10 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { hashContent, normalizeNewlines, readTextIfExists } from "./config.mjs";
-import { SHARED_AGENTS_MD_PATH } from "./modules.mjs";
+import { PACKAGE_ROOT } from "./package.mjs";
+
+/** AGENTS.md の共通部分（dot-agents に同梱）の絶対パス */
+export const SHARED_AGENTS_MD_PATH = join(PACKAGE_ROOT, "agents-md", "shared.md");
 
 /** 対象リポジトリのルートから見た AGENTS.md のパス */
 export const AGENTS_MD_PATH = "AGENTS.md";

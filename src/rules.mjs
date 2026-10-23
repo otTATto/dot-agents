@@ -1,10 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { normalizeNewlines } from "./config.mjs";
+import { REPOSITORY_URL } from "./package.mjs";
 
 /** 対象リポジトリのルートから見たルールの配置先 */
 export const RULES_TARGET_DIR = ".agents/rules";
-
-const REPOSITORY_URL = "https://github.com/otTATto/dot-agents";
 
 const buildHeader = (version) =>
   [

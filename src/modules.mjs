@@ -1,27 +1,13 @@
 import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
-/** パッケージのルートディレクトリの絶対パス */
-export const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+import { join } from "node:path";
+import { PACKAGE_ROOT } from "./package.mjs";
 
 /** rules/ ディレクトリの絶対パス */
 export const RULES_DIR = join(PACKAGE_ROOT, "rules");
 
-/** AGENTS.md の共通部分の絶対パス */
-export const SHARED_AGENTS_MD_PATH = join(PACKAGE_ROOT, "agents-md", "shared.md");
-
 /** モジュールのカテゴリ */
 export const CATEGORIES = ["core", "lang", "stack"];
-
-/**
- * @function dot-agents 自身の package.json に書かれたバージョンを読む
- */
-export const readPackageVersion = async () => {
-  const text = await readFile(join(PACKAGE_ROOT, "package.json"), "utf8");
-  return JSON.parse(text).version;
-};
 
 const HEADING_PATTERN = /^# (.+)$/m;
 

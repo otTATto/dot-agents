@@ -6,7 +6,7 @@ import {
   writeAgentsMd,
 } from "./agents-md.mjs";
 import { writeConfig } from "./config.mjs";
-import { readPackageVersion } from "./modules.mjs";
+import { readPackageVersion } from "./package.mjs";
 import { buildRuleFiles } from "./rules.mjs";
 import { applySync, findSyncConflicts } from "./sync.mjs";
 
