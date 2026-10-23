@@ -1,0 +1,18 @@
+{
+  "version": "0.0.0",
+  "modules": [
+    "lang/typescript"
+  ],
+  "files": {
+    ".agents/rules/comment.md": "sha256:b9be6b0a40fa95680360ff9698aecc825b4f13dc3836a23b90c163be4fe4c199",
+    ".agents/rules/documentation.md": "sha256:e2d1fdd68a2687e25f20870739f28394be5b3949d20f1ef801046a53c67878ae",
+    ".agents/rules/git.md": "sha256:b23140946c46968b66365b7e2b194c7546904ea15d37a8de3d1b6ae197442746",
+    ".agents/rules/naming.md": "sha256:df5896a09d85fa095a4bc6ff1d5562b91f57e755adf53d111e0a95c79813f327",
+    ".agents/rules/readability.md": "sha256:b1fbe52cfa1452f0a9407d11083581541536bcc71b8254a814b3566efd32bd6e",
+    ".agents/rules/review.md": "sha256:f346675863ad71851939dfe5e9d2ff4bd05d754d43aa94cbfcf6ebbceead0346",
+    ".agents/rules/typescript.md": "sha256:a8af8ad9eee4848e034a1f56e8e256952360648f8b0d0d6ec6686b10cf1fbddf"
+  },
+  "blocks": {
+    "AGENTS.md": "sha256:3ccbb06af263e7c3c69960bffba39cf965d10aa9efb5398958f6795cf995ac46"
+  }
+}
