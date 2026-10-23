@@ -21,7 +21,7 @@ const runQuiet = async (t, argv, cwd) => {
   const stderr = [];
   t.mock.method(console, "log", (...args) => stdout.push(args.join(" ")));
   t.mock.method(console, "error", (...args) => stderr.push(args.join(" ")));
-  const code = await run(argv, { cwd });
+  const code = await run(argv, { cwd, isInteractive: false });
   t.mock.restoreAll();
   return { code, stdout: stdout.join("\n"), stderr: stderr.join("\n") };
 };
@@ -192,4 +192,84 @@ test("assertUniqueNames はカテゴリをまたぐ name の重複を検出す�
 
   const dup = { core: [{ id: "core/a", name: "a" }], stack: [{ id: "stack/a", name: "a" }] };
   assert.throws(() => assertUniqueNames(dup), /core\/a.*stack\/a/);
+});
+
+const runInteractive = async (t, cwd, promptSelection, argv = ["init"]) => {
+  const stderr = [];
+  t.mock.method(console, "log", () => {});
+  t.mock.method(console, "error", (...args) => stderr.push(args.join(" ")));
+  const code = await run(argv, { cwd, isInteractive: true, promptSelection });
+  t.mock.restoreAll();
+  return { code, stderr: stderr.join("\n") };
+};
+
+test("対話 init は検出結果をプロンプトに渡し、選択結果を反映する", async (t) => {
+  const cwd = await makeRepo(t);
+  await writeFile(join(cwd, "package.json"), JSON.stringify({ dependencies: { vue: "^3" } }));
+
+  let received;
+  const { code } = await runInteractive(t, cwd, async ({ catalog, detected }) => {
+    received = { hasCatalog: catalog.lang.length > 0, detected };
+    return { lang: ["typescript"], stack: ["vue"] };
+  });
+
+  assert.equal(code, 0);
+  assert.deepEqual(received, {
+    hasCatalog: true,
+    detected: { lang: ["typescript"], stack: ["vue", "web"] },
+  });
+  assert.deepEqual((await readJson(cwd)).modules, ["lang/typescript", "stack/vue"]);
+});
+
+test("対話 init で何も選ばなければ core のみを反映する", async (t) => {
+  const cwd = await makeRepo(t);
+  const { code } = await runInteractive(t, cwd, async () => ({ lang: [], stack: [] }));
+
+  assert.equal(code, 0);
+  assert.deepEqual(await listRules(cwd), CORE_NAMES.map((n) => `${n}.md`));
+});
+
+test("対話 init がキャンセルされたら 1 を返し、何も書かない", async (t) => {
+  const cwd = await makeRepo(t);
+  const { code, stderr } = await runInteractive(t, cwd, async () => null);
+
+  assert.equal(code, 1);
+  assert.match(stderr, /中止しました/);
+  assert.ok(!existsSync(join(cwd, ".agents")));
+});
+
+test("初期化済みなら対話 init はプロンプトを出さずに 1 を返す", async (t) => {
+  const cwd = await makeRepo(t);
+  await runQuiet(t, ["init", "--core-only"], cwd);
+
+  let isCalled = false;
+  const { code, stderr } = await runInteractive(t, cwd, async () => {
+    isCalled = true;
+    return { lang: [], stack: [] };
+  });
+
+  assert.equal(code, 1);
+  assert.match(stderr, /既に初期化されています/);
+  assert.equal(isCalled, false);
+});
+
+test("非対話では引数なしの init はプロンプトを出さずに 1 を返す", async (t) => {
+  const cwd = await makeRepo(t);
+  let isCalled = false;
+  const stderr = [];
+  t.mock.method(console, "error", (...args) => stderr.push(args.join(" ")));
+  const code = await run(["init"], {
+    cwd,
+    isInteractive: false,
+    promptSelection: async () => {
+      isCalled = true;
+      return null;
+    },
+  });
+  t.mock.restoreAll();
+
+  assert.equal(code, 1);
+  assert.match(stderr.join("\n"), /--core-only/);
+  assert.equal(isCalled, false);
+  assert.ok(!existsSync(join(cwd, ".agents")));
 });

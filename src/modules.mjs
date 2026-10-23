@@ -9,6 +9,9 @@ export const RULES_DIR = join(PACKAGE_ROOT, "rules");
 /** モジュールのカテゴリ */
 export const CATEGORIES = ["core", "lang", "stack"];
 
+/** ユーザーが選択できるカテゴリ（core は常に含まれる） */
+export const SELECTABLE_CATEGORIES = CATEGORIES.filter((category) => category !== "core");
+
 const HEADING_PATTERN = /^# (.+)$/m;
 
 const readTitle = async (path) => {

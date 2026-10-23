@@ -22,7 +22,7 @@ const runQuiet = async (t, argv, cwd) => {
   const stderr = [];
   t.mock.method(console, "log", (...args) => stdout.push(args.join(" ")));
   t.mock.method(console, "error", (...args) => stderr.push(args.join(" ")));
-  const code = await run(argv, { cwd });
+  const code = await run(argv, { cwd, isInteractive: false });
   t.mock.restoreAll();
   return { code, stdout: stdout.join("\n"), stderr: stderr.join("\n") };
 };

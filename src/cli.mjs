@@ -1,8 +1,10 @@
 import { parseArgs } from "node:util";
 import { findLocalProblems } from "./check.mjs";
 import { CONFIG_PATH, ConfigError, readConfig } from "./config.mjs";
-import { CATEGORIES, loadCatalog } from "./modules.mjs";
+import { detectModules } from "./detect.mjs";
+import { CATEGORIES, SELECTABLE_CATEGORIES, loadCatalog } from "./modules.mjs";
 import { readPackageVersion } from "./package.mjs";
+import { promptSelection as defaultPromptSelection } from "./prompt.mjs";
 import { reflectDotAgents } from "./reflect.mjs";
 import { compareVersions, findLatestVersion, listRemoteTags } from "./version.mjs";
 
@@ -24,8 +26,6 @@ const USAGE = `dot-agents - LLM 向けルールをリポジトリに反映する
 `;
 
 const CORE_LABEL = "（常に含まれる）";
-
-const SELECTABLE_CATEGORIES = CATEGORIES.filter((category) => category !== "core");
 
 const formatHumanList = (catalog) => {
   const lines = [];
@@ -141,7 +141,25 @@ const reportMissingSelection = (catalog) => {
   console.error("core のみで初期化する場合は --core-only を指定してください。");
 };
 
-const runInit = async (args, { cwd }) => {
+const reportAlreadyInitialized = async (cwd) => {
+  if ((await readConfig(cwd)) === null) {
+    return false;
+  }
+  console.error(`既に初期化されています（${CONFIG_PATH}）。再反映するには sync を使ってください。`);
+  return true;
+};
+
+const detectInCatalog = async (cwd, catalog) => {
+  const detected = await detectModules(cwd);
+  const result = {};
+  for (const category of SELECTABLE_CATEGORIES) {
+    const unknown = new Set(findUnknownNames(catalog, category, detected[category]));
+    result[category] = detected[category].filter((name) => !unknown.has(name));
+  }
+  return result;
+};
+
+const runInit = async (args, { cwd, isInteractive, promptSelection }) => {
   const { values } = parseArgs({
     args,
     options: {
@@ -153,16 +171,26 @@ const runInit = async (args, { cwd }) => {
     allowPositionals: false,
   });
   const catalog = await loadCatalog();
-  const selected = { lang: splitNames(values.lang), stack: splitNames(values.stack) };
+  let selected = { lang: splitNames(values.lang), stack: splitNames(values.stack) };
   const hasSelection = selected.lang.length > 0 || selected.stack.length > 0;
 
   if (values["core-only"] && hasSelection) {
     console.error("--core-only は --lang / --stack と同時に指定できません。");
     return 1;
   }
-  if (!values["core-only"] && !hasSelection) {
-    reportMissingSelection(catalog);
+  if (await reportAlreadyInitialized(cwd)) {
     return 1;
+  }
+  if (!values["core-only"] && !hasSelection) {
+    if (!isInteractive) {
+      reportMissingSelection(catalog);
+      return 1;
+    }
+    selected = await promptSelection({ catalog, detected: await detectInCatalog(cwd, catalog) });
+    if (selected === null) {
+      console.error("中止しました");
+      return 1;
+    }
   }
 
   let hasUnknown = false;
@@ -175,11 +203,6 @@ const runInit = async (args, { cwd }) => {
     }
   }
   if (hasUnknown) {
-    return 1;
-  }
-
-  if ((await readConfig(cwd)) !== null) {
-    console.error(`既に初期化されています（${CONFIG_PATH}）。再反映するには sync を使ってください。`);
     return 1;
   }
 
@@ -301,16 +324,24 @@ const COMMANDS = {
  * @param argv サブコマンド以降の引数配列（process.argv.slice(2) 相当）
  * @param options.cwd 対象リポジトリのルート（既定は process.cwd()）
  * @param options.listRemoteTags check が最新バージョンの確認に使うタグ名の取得関数（既定は version.mjs の listRemoteTags）
+ * @param options.isInteractive init で --lang / --stack / --core-only 未指定時に対話選択へ進むか（既定は標準入出力がどちらも TTY）
+ * @param options.promptSelection init の対話選択（既定は prompt.mjs の promptSelection）。{ lang, stack } を返し、キャンセル時は null
  * @returns プロセスの終了コード（正常時 0、未知のコマンド・不正なオプション・不正な設定・反映の衝突時、check で問題が見つかった時 1）
  *
  * NOTE:
  *   - 出力は標準出力、エラーと未知コマンド時の usage は標準エラーに書く
  *   - コマンド内で発生した予期しない例外は呼び出し元に伝播する
  *   - check は最新バージョンを確認できなくても失敗にせず、警告を標準エラーに書く
+ *   - init の対話選択がキャンセルされた場合は何も書かず 1 を返す
  */
 export const run = async (
   argv,
-  { cwd = process.cwd(), listRemoteTags: fetchTags = listRemoteTags } = {},
+  {
+    cwd = process.cwd(),
+    listRemoteTags: fetchTags = listRemoteTags,
+    isInteractive = Boolean(process.stdin.isTTY && process.stdout.isTTY),
+    promptSelection = defaultPromptSelection,
+  } = {},
 ) => {
   const [command, ...rest] = argv;
 
@@ -332,7 +363,7 @@ export const run = async (
   }
 
   try {
-    return await handler(rest, { cwd, listRemoteTags: fetchTags });
+    return await handler(rest, { cwd, listRemoteTags: fetchTags, isInteractive, promptSelection });
   } catch (error) {
     if (error instanceof ConfigError || error?.code?.startsWith("ERR_PARSE_ARGS_")) {
       console.error(error.message);

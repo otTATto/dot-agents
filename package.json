@@ -23,5 +23,8 @@
   ],
   "scripts": {
     "test": "node --test"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.8.1"
   }
 }
