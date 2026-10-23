@@ -13,7 +13,7 @@ dot-agents is a CLI that reflects [otTATto](https://github.com/otTATto)'s **PERS
 > Node.js (v22 or later) and git are required.
 
 > [!TIP]
-> To learn more about each CLI command, run `npx github:otTATto/dot-agents --help` or see 📖 [docs/ja/cli.md](./docs/ja/cli.md) (Japanese).
+> To learn more about each CLI command, run `npx github:otTATto/dot-agents --help` or see 📖 [docs/en/cli.md](./docs/en/cli.md).
 
 ### 🔰 Setting up dot-agents in a repository for the first time
 
@@ -43,7 +43,7 @@ dot-agents is a CLI that reflects [otTATto](https://github.com/otTATto)'s **PERS
 4. `AGENTS.md`, `CLAUDE.md`, and `.agents/` are created in the repository
 
 > [!TIP]
-> For details on the generated rules, see 📖 [docs/ja/rules.md](./docs/ja/rules.md) (Japanese).
+> For details on the generated rules, see 📖 [docs/en/rules.md](./docs/en/rules.md).
 
 ### 🪄 Updating a repository that already uses dot-agents to the latest version
 
